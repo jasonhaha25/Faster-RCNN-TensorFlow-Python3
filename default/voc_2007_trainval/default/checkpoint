@@ -1,0 +1,5 @@
+model_checkpoint_path: "C:\\Users\\jason\\Desktop\\CSC413\\FinalProject\\Faster-RCNN-TensorFlow-Python3\\default\\voc_2007_trainval\\default\\vgg16_faster_rcnn_iter_10000.ckpt"
+all_model_checkpoint_paths: "C:\\Users\\jason\\Desktop\\CSC413\\FinalProject\\Faster-RCNN-TensorFlow-Python3\\default\\voc_2007_trainval\\default\\vgg16_faster_rcnn_iter_2500.ckpt"
+all_model_checkpoint_paths: "C:\\Users\\jason\\Desktop\\CSC413\\FinalProject\\Faster-RCNN-TensorFlow-Python3\\default\\voc_2007_trainval\\default\\vgg16_faster_rcnn_iter_5000.ckpt"
+all_model_checkpoint_paths: "C:\\Users\\jason\\Desktop\\CSC413\\FinalProject\\Faster-RCNN-TensorFlow-Python3\\default\\voc_2007_trainval\\default\\vgg16_faster_rcnn_iter_7500.ckpt"
+all_model_checkpoint_paths: "C:\\Users\\jason\\Desktop\\CSC413\\FinalProject\\Faster-RCNN-TensorFlow-Python3\\default\\voc_2007_trainval\\default\\vgg16_faster_rcnn_iter_10000.ckpt"

@@ -21,6 +21,11 @@ from lib.config import config as cfg
 from lib.datasets.imdb import imdb
 from .voc_eval import voc_eval
 
+import matplotlib.pyplot as plt
+from sklearn.metrics import precision_recall_curve
+from itertools import cycle
+import pylab as pl
+
 
 class pascal_voc(imdb):
     def __init__(self, image_set, year, devkit_path=None):
@@ -31,11 +36,7 @@ class pascal_voc(imdb):
             else devkit_path
         self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
         self._classes = ('__background__',  # always index 0
-                         'aeroplane', 'bicycle', 'bird', 'boat',
-                         'bottle', 'bus', 'car', 'cat', 'chair',
-                         'cow', 'diningtable', 'dog', 'horse',
-                         'motorbike', 'person', 'pottedplant',
-                         'sheep', 'sofa', 'train', 'tvmonitor')
+                         'Car', 'Pedestrian', 'Cyclist')
         self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
@@ -108,8 +109,7 @@ class pascal_voc(imdb):
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
-        gt_roidb = [self._load_pascal_annotation(index)
-                    for index in self.image_index]
+        gt_roidb = [self._load_pascal_annotation(index) for index in self.image_index]
         with open(cache_file, 'wb') as fid:
             pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         print('wrote gt roidb to {}'.format(cache_file))
@@ -143,14 +143,14 @@ class pascal_voc(imdb):
         filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
         tree = ET.parse(filename)
         objs = tree.findall('object')
-        if not self.config['use_diff']:
-            # Exclude the samples labeled as difficult
-            non_diff_objs = [
-                obj for obj in objs if int(obj.find('difficult').text) == 0]
-            # if len(non_diff_objs) != len(objs):
-            #     print 'Removed {} difficult objects'.format(
-            #         len(objs) - len(non_diff_objs))
-            objs = non_diff_objs
+        # if not self.config['use_diff']:
+        #     # Exclude the samples labeled as difficult
+        #     non_diff_objs = [
+        #         obj for obj in objs if int(obj.find('difficult').text) == 0]
+        #     # if len(non_diff_objs) != len(objs):
+        #     #     print 'Removed {} difficult objects'.format(
+        #     #         len(objs) - len(non_diff_objs))
+        #     objs = non_diff_objs
         num_objs = len(objs)
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
@@ -163,11 +163,11 @@ class pascal_voc(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = float(bbox.find('xmin').text) - 1
-            y1 = float(bbox.find('ymin').text) - 1
-            x2 = float(bbox.find('xmax').text) - 1
-            y2 = float(bbox.find('ymax').text) - 1
-            cls = self._class_to_ind[obj.find('name').text.lower().strip()]
+            x1 = float(bbox.find('xmin').text)
+            y1 = float(bbox.find('ymin').text)
+            x2 = float(bbox.find('xmax').text)
+            y2 = float(bbox.find('ymax').text)
+            cls = self._class_to_ind[obj.find('name').text.strip()]
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
@@ -191,7 +191,6 @@ class pascal_voc(imdb):
         filename = self._get_comp_id() + '_det_' + self._image_set + '_{:s}.txt'
         path = os.path.join(
             self._devkit_path,
-            'results',
             'VOC' + self._year,
             'Main',
             filename)
@@ -225,6 +224,10 @@ class pascal_voc(imdb):
             self._image_set + '.txt')
         cachedir = os.path.join(self._devkit_path, 'annotations_cache')
         aps = []
+
+        recs=[]
+        precs=[]
+
         # The PASCAL VOC metric changed in 2010
         use_07_metric = True if int(self._year) < 2010 else False
         print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
@@ -238,9 +241,24 @@ class pascal_voc(imdb):
                 filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
                 use_07_metric=use_07_metric)
             aps += [ap]
+
+            pl.plot(rec, prec, lw=2,
+                    label='Precision-recall curve of class {} (area = {:.4f})'
+                          ''.format(cls, ap))
+
             print(('AP for {} = {:.4f}'.format(cls, ap)))
             with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
                 pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+
+        pl.xlabel('Recall')
+        pl.ylabel('Precision')
+        plt.grid(True)
+        pl.ylim([0.0, 1.2])
+        pl.xlim([0.0, 1.0])
+        pl.title('Precision-Recall')
+        pl.legend(loc="upper right")
+        plt.show()
+
         print(('Mean AP = {:.4f}'.format(np.mean(aps))))
         print('~~~~~~~~')
         print('Results:')
@@ -276,12 +294,12 @@ class pascal_voc(imdb):
         self._do_python_eval(output_dir)
         if self.config['matlab_eval']:
             self._do_matlab_eval(output_dir)
-        if self.config['cleanup']:
-            for cls in self._classes:
-                if cls == '__background__':
-                    continue
-                filename = self._get_voc_results_file_template().format(cls)
-                os.remove(filename)
+        # if self.config['cleanup']:
+        #     for cls in self._classes:
+        #         if cls == '__background__':
+        #             continue
+        #         filename = self._get_voc_results_file_template().format(cls)
+        #         os.remove(filename)
 
     def competition_mode(self, on):
         if on:

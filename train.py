@@ -79,6 +79,8 @@ class Train:
         tfconfig.gpu_options.allow_growth = True
         sess = tf.Session(config=tfconfig)
 
+        ttt_loss = []
+
         with sess.graph.as_default():
 
             tf.set_random_seed(cfg.FLAGS.rng_seed)
@@ -157,6 +159,7 @@ class Train:
 
             timer.toc()
             iter += 1
+            ttt_loss.append(total_loss)
 
             # Display training information
             if iter % (cfg.FLAGS.display) == 0:
@@ -167,6 +170,10 @@ class Train:
 
             if iter % cfg.FLAGS.snapshot_iterations == 0:
                 self.snapshot(sess, iter )
+        textfile = open("./aaa.txt", "w")
+        for element in ttt_loss:
+            textfile.write(str(element) + "\n")
+        textfile.close()
 
     def get_variables_in_checkpoint_file(self, file_name):
         try:
